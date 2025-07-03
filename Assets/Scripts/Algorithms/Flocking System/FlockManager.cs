@@ -13,10 +13,11 @@ public class FlockManager : MonoBehaviour
 
     public FlockBehavior behavior;
 
-    [SerializeField] private Material greenMat, orangeMat;
+    [SerializeField] private Material agentMaterial; // Shared material for all agents
 
     private List<FlockAgent> agents = new List<FlockAgent>();
 
+    // Accessors for shared values
     public float DriveFactor => driveFactor;
     public float NeighborRadius => neighborRadius;
     public float AvoidanceRadius => avoidanceRadius;
@@ -25,6 +26,7 @@ public class FlockManager : MonoBehaviour
 
     void Start()
     {
+        // Spawn and initialize all agents
         for (int i = 0; i < flockSize; i++)
         {
             Vector2 offset2D = Random.insideUnitCircle * spawnRadius;
@@ -33,15 +35,12 @@ public class FlockManager : MonoBehaviour
             FlockAgent agent = Instantiate(agentPrefab, spawnPos, Quaternion.identity, transform);
             agent.name = $"Agent {i}";
             agent.Initialize(this);
-
-            // Set correct team ID and material
-            int teamID = i < flockSize / 2 ? 0 : 1;
-            Material mat = GetTeamMaterial(teamID);
-            agent.SetTeam(teamID, mat); // ← this overrides the prefab value
+            agent.ApplyMaterial(agentMaterial);
 
             agents.Add(agent);
         }
     }
+
     public void RespawnAgent(FlockAgent deadAgent)
     {
         agents.Remove(deadAgent);
@@ -52,13 +51,12 @@ public class FlockManager : MonoBehaviour
         FlockAgent agent = Instantiate(agentPrefab, spawnPos, Quaternion.identity, transform);
         agent.name = $"Respawned Agent {Random.Range(1000, 9999)}";
         agent.Initialize(this);
+        agent.ApplyMaterial(agentMaterial);
+
         agents.Add(agent);
     }
 
-    public Material GetTeamMaterial(int id)
-    {
-        return id == 0 ? greenMat : orangeMat;
-    }
+    // Optional bounds gizmo for debugging
     void OnDrawGizmosSelected()
     {
         if (behavior == null) return;

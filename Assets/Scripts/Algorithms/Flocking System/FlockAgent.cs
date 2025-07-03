@@ -14,9 +14,6 @@ public class FlockAgent : MonoBehaviour
     public LayerMask obstacleLayer;
     public float obstacleAvoidanceStrength = 5f;
 
-    [Header("Flock Team Settings")]
-    [HideInInspector] public int teamID = -1; // Don't assign manually
-
     public Collider Collider => agentCollider;
 
     void Awake()
@@ -27,25 +24,26 @@ public class FlockAgent : MonoBehaviour
     public void Initialize(FlockManager manager)
     {
         this.manager = manager;
-        velocity = transform.up;
+        velocity = transform.up; // Initial direction
     }
-    public void SetTeam(int newTeamID, Material mat)
+
+    // Apply material to the agent's visual
+    public void ApplyMaterial(Material mat)
     {
-        teamID = newTeamID;
         GetComponentInChildren<Renderer>().material = mat;
     }
 
     void Update()
     {
-        HandleTeamConversion(); // <-- moved from LateUpdate()
-
+        // Get nearby agents for alignment, cohesion, avoidance
         List<Transform> context = GetNearbyObjects();
-        Vector3 move = manager.Behavior.CalculateMove(this, context, manager);
 
-        move = Vector3.ClampMagnitude(move, 1f);
+        // Compute move vector from behavior logic
+        Vector3 move = manager.Behavior.CalculateMove(this, context, manager);
+        move = Vector3.ClampMagnitude(move, 1f); // Limit influence strength
         velocity += move * manager.DriveFactor * Time.deltaTime;
 
-        // Circular bounds
+        // Stay within circular bounds
         Vector3 center = manager.transform.position;
         float distanceToCenter = Vector3.Distance(transform.position, center);
         if (distanceToCenter > manager.Behavior.boundsRadius)
@@ -54,7 +52,7 @@ public class FlockAgent : MonoBehaviour
             velocity += toCenter * manager.Behavior.edgeSteerWeight * Time.deltaTime;
         }
 
-        // Obstacle avoidance
+        // Obstacle avoidance using a forward sphere cast
         Ray ray = new Ray(transform.position, velocity.normalized);
         if (Physics.SphereCast(ray, lookaheadRadius, out RaycastHit hit, lookaheadDistance, obstacleLayer))
         {
@@ -63,11 +61,12 @@ public class FlockAgent : MonoBehaviour
             velocity += avoidDir * obstacleAvoidanceStrength * (1f + proximityFactor) * Time.deltaTime;
         }
 
-        // Final move
+        // Apply movement
         velocity = Vector3.ClampMagnitude(velocity, 5f);
         velocity.z = 0f;
         transform.position += velocity * Time.deltaTime;
 
+        // Smoothly rotate toward velocity
         if (velocity != Vector3.zero)
         {
             Quaternion targetRot = Quaternion.LookRotation(Vector3.forward, velocity.normalized);
@@ -75,78 +74,38 @@ public class FlockAgent : MonoBehaviour
         }
     }
 
-    void HandleTeamConversion()
-    {
-        int[] teamCounts = new int[2];
-
-        foreach (FlockAgent other in manager.Agents)
-        {
-            if (other == this) continue;
-
-            float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist < manager.NeighborRadius)
-            {
-                teamCounts[other.teamID]++;
-            }
-        }
-
-        int myTeam = teamID;
-        int otherTeam = 1 - myTeam;
-
-        bool outnumbered = teamCounts[otherTeam] > teamCounts[myTeam] + 2;
-        bool conversionThreshold = teamCounts[otherTeam] >= 3;
-
-        if (outnumbered && conversionThreshold)
-        {
-            ConvertTo(otherTeam);
-            velocity = Vector3.zero;
-        }
-    }
-
-    void ConvertTo(int newTeamID)
-    {
-        if (newTeamID == teamID) return;
-
-        teamID = newTeamID;
-        Material mat = manager.GetTeamMaterial(teamID);
-        GetComponentInChildren<Renderer>().material = mat;
-        velocity = Vector3.zero;
-    }
-
-    List<Transform> GetNearbyObjects()
+    private List<Transform> GetNearbyObjects()
     {
         List<Transform> context = new List<Transform>();
         Collider[] contextColliders = Physics.OverlapSphere(transform.position, manager.NeighborRadius);
         foreach (Collider c in contextColliders)
         {
-            if (c == agentCollider) continue;
-
-            FlockAgent other = c.GetComponent<FlockAgent>();
-            if (other != null && other.teamID == this.teamID)
+            if (c != agentCollider)
             {
-                context.Add(other.transform);
+                context.Add(c.transform);
             }
         }
         return context;
     }
 
+    // If agent hits an obstacle, destroy and respawn
     private void OnTriggerEnter(Collider other)
     {
         if (((1 << other.gameObject.layer) & obstacleLayer) != 0)
         {
-            // Notify manager to respawn
             manager.RespawnAgent(this);
             Destroy(gameObject);
         }
     }
 
+    // Visualize direction and avoidance radius
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Vector3 lookAhead = velocity.normalized * lookaheadDistance;
         Gizmos.DrawRay(transform.position, lookAhead);
         Gizmos.DrawWireSphere(transform.position + lookAhead, lookaheadRadius);
-        Gizmos.color = teamID == 0 ? Color.green : Color.red;
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, manager.NeighborRadius);
     }
 }

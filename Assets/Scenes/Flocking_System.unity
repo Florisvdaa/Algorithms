@@ -647,8 +647,7 @@ MonoBehaviour:
   neighborRadius: 2
   avoidanceRadius: 1
   behavior: {fileID: 11400000, guid: 410b2cada23a34d409fcf8b1c7e363c9, type: 2}
-  greenMat: {fileID: 2100000, guid: 651a74d00e12ea1428de48048614214f, type: 2}
-  orangeMat: {fileID: 2100000, guid: 177badc9f7170f540a6eb92e5f97e415, type: 2}
+  agentMaterial: {fileID: 2100000, guid: 651a74d00e12ea1428de48048614214f, type: 2}
 --- !u!1 &948872460
 GameObject:
   m_ObjectHideFlags: 0

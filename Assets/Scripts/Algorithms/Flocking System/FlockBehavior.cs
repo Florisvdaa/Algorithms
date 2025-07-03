@@ -25,13 +25,8 @@ public class FlockBehavior : ScriptableObject
         int count = 0;
         foreach (Transform item in context)
         {
-            FlockAgent otherAgent = item.GetComponent<FlockAgent>();
-            if (otherAgent == null || otherAgent.teamID != agent.teamID)
-                continue;
-
             Vector3 toNeighbor = item.position - agent.transform.position;
             toNeighbor.z = 0f;
-
 
             alignment += item.forward;
             cohesion += item.position;
