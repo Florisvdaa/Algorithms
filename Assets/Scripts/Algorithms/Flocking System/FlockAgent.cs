@@ -95,6 +95,7 @@ public class FlockAgent : MonoBehaviour
         {
             manager.RespawnAgent(this);
             Destroy(gameObject);
+            //FlockFeedbackManager.Instance.FlockDeath(transform.position);
         }
     }
 
