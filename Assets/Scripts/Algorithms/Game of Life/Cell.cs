@@ -15,6 +15,12 @@ public class Cell
         _blackVisual = blackVisual;
     }
 
+    public void Toggle()
+    {
+        IsAlive = !IsAlive;
+        UpdateVisual();
+    }
+
     public void UpdateVisual()
     {
         _whiteVisual.SetActive(IsAlive);

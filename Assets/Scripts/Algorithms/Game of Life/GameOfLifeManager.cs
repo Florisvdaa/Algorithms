@@ -3,48 +3,56 @@ using UnityEngine;
 public class GameOfLifeManager : MonoBehaviour
 {
     [SerializeField] private GameOfLifeGrid visualizer;
-    [SerializeField] private float tickRate = 0.5f;
+    [SerializeField, Range(0.01f, 2f)] private float tickRate = 0.5f;
+    [SerializeField] private Camera mainCamera;
 
-    private Cell[,] grid;
     private float timer;
+    private bool isRunning = false;
 
-    private void Start()
+    public void SetRunning(bool state)
     {
-        grid = visualizer.CreateGrid();
+        isRunning = state;
+
+        if (isRunning)
+        {
+            RandomizeCells(); // add this line to populate randomly
+        }
     }
+    public void SetTickRate(float rate) => tickRate = rate;
+    public void Step() => Simulate();
 
     private void Update()
     {
-        timer += Time.deltaTime;
-        if (timer >= tickRate)
+        if (isRunning)
         {
-            timer = 0f;
-            StepSimulation();
+            timer += Time.deltaTime;
+            if (timer >= tickRate)
+            {
+                timer = 0f;
+                Simulate();
+            }
         }
     }
 
-    private void StepSimulation()
+    private void Simulate()
     {
-        int sizeX = visualizer.SizeX;
-        int sizeY = visualizer.SizeY;
+        int xSize = visualizer.SizeX;
+        int ySize = visualizer.SizeY;
+        var grid = visualizer.Grid;
 
-        // Calculate next state
-        for (int x = 0; x < sizeX; x++)
+        for (int x = 0; x < xSize; x++)
         {
-            for (int y = 0; y < sizeY; y++)
+            for (int y = 0; y < ySize; y++)
             {
-                int aliveNeighbors = CountAliveNeighbors(x, y);
+                int aliveNeighbors = CountAliveNeighbors(grid, x, y);
                 var cell = grid[x, y];
 
-                // Conway's rules:
-                if (cell.IsAlive)
-                    cell.NextState = aliveNeighbors == 2 || aliveNeighbors == 3;
-                else
-                    cell.NextState = aliveNeighbors == 3;
+                cell.NextState = cell.IsAlive
+                    ? (aliveNeighbors == 2 || aliveNeighbors == 3)
+                    : (aliveNeighbors == 3);
             }
         }
 
-        // Apply state
         foreach (var cell in grid)
         {
             cell.IsAlive = cell.NextState;
@@ -52,27 +60,42 @@ public class GameOfLifeManager : MonoBehaviour
         }
     }
 
-    private int CountAliveNeighbors(int cx, int cy)
+    private int CountAliveNeighbors(Cell[,] grid, int cx, int cy)
     {
         int count = 0;
+        int w = visualizer.SizeX;
+        int h = visualizer.SizeY;
 
         for (int dx = -1; dx <= 1; dx++)
             for (int dy = -1; dy <= 1; dy++)
             {
-                if (dx == 0 && dy == 0)
-                    continue;
+                if (dx == 0 && dy == 0) continue;
 
                 int x = cx + dx;
                 int y = cy + dy;
 
-                if (x >= 0 && x < visualizer.SizeX &&
-                    y >= 0 && y < visualizer.SizeY &&
-                    grid[x, y].IsAlive)
-                {
+                if (x >= 0 && x < w && y >= 0 && y < h && grid[x, y].IsAlive)
                     count++;
-                }
             }
 
         return count;
     }
+    public void RandomizeCells(float aliveChance = 0.2f)
+    {
+        var grid = visualizer.Grid;
+        int width = visualizer.SizeX;
+        int height = visualizer.SizeY;
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                bool willBeAlive = Random.value < aliveChance;
+                var cell = grid[x, y];
+                cell.IsAlive = willBeAlive;
+                cell.UpdateVisual();
+            }
+        }
+    }
+
 }
