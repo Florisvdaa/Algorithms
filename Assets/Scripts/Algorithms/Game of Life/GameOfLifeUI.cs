@@ -13,6 +13,9 @@ public class GameOfLifeUI : MonoBehaviour
     [SerializeField] private Button buildButton;
     [SerializeField] private Button runPauseButton;
     [SerializeField] private TextMeshProUGUI runButtonText;
+    [SerializeField] private TextMeshProUGUI xSliderText;
+    [SerializeField] private TextMeshProUGUI ySliderText;
+    [SerializeField] private TextMeshProUGUI tickSliderText;
 
     private bool isRunning = false;
 
@@ -21,7 +24,32 @@ public class GameOfLifeUI : MonoBehaviour
         buildButton.onClick.AddListener(OnBuild);
         runPauseButton.onClick.AddListener(OnToggleRun);
         tickSlider.onValueChanged.AddListener(gameOfLifeManager.SetTickRate);
+
+        xSlider.onValueChanged.AddListener(OnDimensionChanged);
+        ySlider.onValueChanged.AddListener(OnDimensionChanged);
+
         OnBuild(); // build once at start
+    }
+
+    private void Update()
+    {
+        xSliderText.text = $"X Axis: {(int)xSlider.value} ({FormatSliderPercentage(xSlider)})";
+        ySliderText.text = $"Y Axis: {(int)ySlider.value} ({FormatSliderPercentage(ySlider)})";
+        tickSliderText.text = $"Tick speed: {tickSlider.value:0.00}";
+    }
+
+
+    /// <summary>
+    /// This function generates the Grid based on the slider current value.
+    /// We don't need the float param, but it needs to be there because the slider value.
+    /// </summary>
+    /// <param name="_"></param>
+    private void OnDimensionChanged(float _)
+    {
+        if (!isRunning)
+        {
+            gameOfLifeGrid.RebuildGrid((int)xSlider.value, (int)ySlider.value);
+        }
     }
 
     private void OnBuild()
@@ -44,4 +72,10 @@ public class GameOfLifeUI : MonoBehaviour
         xSlider.value = size.x;
         ySlider.value = size.y;
     }
+    private string FormatSliderPercentage(Slider slider)
+    {
+        float percent = (slider.value / slider.maxValue) * 100f;
+        return $"{Mathf.RoundToInt(percent)}%";
+    }
+
 }

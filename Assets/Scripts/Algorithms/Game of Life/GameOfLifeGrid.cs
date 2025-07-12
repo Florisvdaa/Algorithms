@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameOfLifeGrid : MonoBehaviour
 {
     [SerializeField] private GameObject cellPrefab;
+    [SerializeField] private ObjectPool cellPool;
     [SerializeField] private float spacing = 1.1f;
 
     private int sizeX = 10;
@@ -12,14 +14,19 @@ public class GameOfLifeGrid : MonoBehaviour
 
     public Cell[,] Grid { get; private set; }
 
+    private List<GameObject> activeCellObjects = new List<GameObject>();
+
     public void RebuildGrid(int x, int y)
     {
         sizeX = Mathf.Clamp(x, 1, 100);
         sizeY = Mathf.Clamp(y, 1, 100);
 
-        // Destroy previous
-        foreach (Transform child in transform)
-            Destroy(child.gameObject);
+        // Return previous to pool
+        foreach (GameObject obj in activeCellObjects)
+        {
+            cellPool.Return(obj);
+        }
+        activeCellObjects.Clear();
 
         Grid = new Cell[sizeX, sizeY];
 
@@ -28,25 +35,29 @@ public class GameOfLifeGrid : MonoBehaviour
             for (int yi = 0; yi < sizeY; yi++)
             {
                 Vector3 pos = new Vector3(xi, yi, 0f) * spacing;
-                GameObject cellObj = Instantiate(cellPrefab, pos, Quaternion.identity, transform);
 
-                var white = cellObj.transform.Find("WhiteVisual").gameObject;
-                var black = cellObj.transform.Find("BlackVisual").gameObject;
+                GameObject cellObj = cellPool.Get(pos, transform);
 
-                bool alive = false; // Start all dead
-               
-                var cell = new Cell(false, white, black);
+                var white = cellObj.transform.Find("WhiteVisual")?.gameObject;
+                var black = cellObj.transform.Find("BlackVisual")?.gameObject;
+                var colliderObj = cellObj.transform.Find("Collider")?.GetComponent<Collider>();
 
+                if (white == null || black == null || colliderObj == null)
+                {
+                    Debug.LogWarning($"Cell prefab is missing required parts at [{xi}, {yi}]!");
+                }
+
+                Cell cell = new Cell(false, white, black, colliderObj);
                 Grid[xi, yi] = cell;
                 cell.UpdateVisual();
+
+                activeCellObjects.Add(cellObj);
             }
         }
     }
 
     public Vector2Int GetMaxGridSizeFromCamera(Camera cam)
     {
-        float spacing = 1.1f;
-
         Vector3 bottomLeft = cam.ScreenToWorldPoint(new Vector3(0, 0, cam.nearClipPlane));
         Vector3 topRight = cam.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, cam.nearClipPlane));
 
@@ -58,5 +69,4 @@ public class GameOfLifeGrid : MonoBehaviour
 
         return new Vector2Int(Mathf.Min(cellsX, 100), Mathf.Min(cellsY, 100));
     }
-
 }
