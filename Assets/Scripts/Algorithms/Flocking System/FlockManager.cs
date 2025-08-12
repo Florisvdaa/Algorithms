@@ -24,8 +24,12 @@ public class FlockManager : MonoBehaviour
     public FlockBehavior Behavior => behavior;
     public List<FlockAgent> Agents => agents;
 
-    void Start()
+    public void SpawnAgents(int newFlockSize)
     {
+        ClearAgents();
+
+        flockSize = newFlockSize;
+
         // Spawn and initialize all agents
         for (int i = 0; i < flockSize; i++)
         {
@@ -55,6 +59,20 @@ public class FlockManager : MonoBehaviour
 
         agents.Add(agent);
     }
+
+    public void ClearAgents()
+    {
+        foreach (var agent in agents)
+        {
+            if (agent != null)
+            {
+                Destroy(agent.gameObject);
+            }
+        }
+
+        agents.Clear();
+    }
+
 
     // Optional bounds gizmo for debugging
     void OnDrawGizmosSelected()
